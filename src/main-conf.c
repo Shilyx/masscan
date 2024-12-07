@@ -30,6 +30,7 @@
 #include "templ-opts.h"
 #include <ctype.h>
 #include <limits.h>
+#include <malloc.h>
 
 #ifdef WIN32
 #include <direct.h>
@@ -3868,8 +3869,9 @@ trim(char *line, size_t sizeof_line)
 void
 masscan_read_config_file(struct Masscan *masscan, const char *filename)
 {
+    int BUF_SIZE = 30 * 1024 * 1024;
     FILE *fp;
-    char line[65536];
+    char* line = (char*)malloc(BUF_SIZE); // if failed, let it crash
 
     fp = fopen(filename, "rt");
     if (fp == NULL) {
@@ -3885,11 +3887,11 @@ masscan_read_config_file(struct Masscan *masscan, const char *filename)
         return;
     }
 
-    while (fgets(line, sizeof(line), fp)) {
+    while (fgets(line, BUF_SIZE, fp)) {
         char *name;
         char *value;
 
-        trim(line, sizeof(line));
+        trim(line, BUF_SIZE);
 
         if (ispunct(line[0] & 0xFF) || line[0] == '\0')
             continue;
@@ -3900,12 +3902,13 @@ masscan_read_config_file(struct Masscan *masscan, const char *filename)
             continue;
         *value = '\0';
         value++;
-        trim(name, sizeof(line));
-        trim(value, sizeof(line));
+        trim(name, BUF_SIZE);
+        trim(value, BUF_SIZE);
 
         masscan_set_parameter(masscan, name, value);
     }
 
+    free(line);
     fclose(fp);
 }
 
